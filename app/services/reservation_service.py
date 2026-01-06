@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from app.storage import store
 from app.services.inventory_service import InventoryService
+from app.services.fairness_service import FairnessService
 
 
 class ReservationService:
@@ -31,9 +32,21 @@ class ReservationService:
                 and reservation["status"] == "RESERVED"
             ):
                 return reservation
+        
+        
 
         # Reserve inventory (this is concurrency-safe)
+        
+        # Record user attempt
+        store.record_reservation(user_id)
+
+        ttl_seconds = self.fairness_service.get_ttl_seconds(user_id)
+
+        # Reserve inventory (concurrency-safe)
         await self.inventory_service.reserve_inventory(sku, quantity)
+
+        expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
+
 
         reservation_id = str(uuid.uuid4())
         expires_at = datetime.utcnow() + timedelta(seconds=self.RESERVATION_TTL_SECONDS)
@@ -58,6 +71,8 @@ class ReservationService:
 
         if reservation["status"] != "RESERVED":
             raise ValueError("Reservation cannot be confirmed")
+        
+        
 
         # Check expiry
         if reservation["expires_at"] < datetime.utcnow():
@@ -95,3 +110,6 @@ class ReservationService:
         )
 
         reservation["status"] = "EXPIRED"
+        
+        store.record_successful_checkout(reservation["user_id"])
+
