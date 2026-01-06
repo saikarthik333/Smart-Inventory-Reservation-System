@@ -30,3 +30,17 @@ class InMemoryStore:
         if sku not in self.inventory:
             self.inventory[sku] = 0
         self.inventory[sku] += quantity
+        
+    def save_reservation(self, reservation_id: str, data: dict):
+        self.reservations[reservation_id] = data
+
+    def get_reservation(self, reservation_id: str):
+    return self.reservations.get(reservation_id)
+
+    def delete_reservation(self, reservation_id: str):
+    if reservation_id in self.reservations:
+        del self.reservations[reservation_id]
+
+    def get_all_reservations(self):
+    return self.reservations
+
