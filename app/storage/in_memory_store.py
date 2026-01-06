@@ -11,36 +11,53 @@ class InMemoryStore:
         # sku -> available quantity
         self.inventory: Dict[str, int] = {}
 
+        # reservation_id -> reservation data
+        self.reservations: Dict[str, dict] = {}
+
     def set_inventory(self, sku: str, quantity: int):
-        """Initialize or reset inventory for a SKU"""
         self.inventory[sku] = quantity
 
     def get_inventory(self, sku: str) -> int:
-        """Get available inventory for a SKU"""
         return self.inventory.get(sku, 0)
 
     def decrement_inventory(self, sku: str, quantity: int):
-        """Reduce inventory safely (caller must ensure availability)"""
         if sku not in self.inventory:
             raise ValueError("SKU does not exist")
         self.inventory[sku] -= quantity
 
     def increment_inventory(self, sku: str, quantity: int):
-        """Increase inventory (used on cancel/expiry)"""
         if sku not in self.inventory:
             self.inventory[sku] = 0
         self.inventory[sku] += quantity
-        
+
+    # ---------- Reservation storage ----------
+
     def save_reservation(self, reservation_id: str, data: dict):
         self.reservations[reservation_id] = data
 
     def get_reservation(self, reservation_id: str):
-    return self.reservations.get(reservation_id)
+        return self.reservations.get(reservation_id)
 
     def delete_reservation(self, reservation_id: str):
-    if reservation_id in self.reservations:
-        del self.reservations[reservation_id]
+        if reservation_id in self.reservations:
+            del self.reservations[reservation_id]
 
     def get_all_reservations(self):
-    return self.reservations
+        return self.reservations
+    
+    def get_user_stats(self, user_id: str) -> dict:
+        if user_id not in self.user_stats:
+        self.user_stats[user_id] = {
+            "total_reservations": 0,
+            "successful_checkouts": 0
+        }
+    return self.user_stats[user_id]
+
+    def record_reservation(self, user_id: str):
+        stats = self.get_user_stats(user_id)
+        stats["total_reservations"] += 1
+
+    def record_successful_checkout(self, user_id: str):
+      stats = self.get_user_stats(user_id)
+     stats["successful_checkouts"] += 1
 
