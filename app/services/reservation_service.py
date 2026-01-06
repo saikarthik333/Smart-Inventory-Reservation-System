@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from app.storage import store
 from app.services.inventory_service import InventoryService
 from app.services.fairness_service import FairnessService
+from app.services.waitlist_service import WaitlistService
 
 
 class ReservationService:
@@ -12,19 +13,18 @@ class ReservationService:
     create, confirm, cancel, expire
     """
 
-    RESERVATION_TTL_SECONDS = 300  # 5 minutes
-
     def __init__(self):
         self.inventory_service = InventoryService()
+        self.fairness_service = FairnessService()
+        self.waitlist_service = WaitlistService(self)
+
 
     async def create_reservation(self, sku: str, user_id: str, quantity: int):
         """
-        Idempotent reservation creation.
-        If same user already has an active reservation for this SKU,
-        return it instead of creating a new one.
+        Idempotent reservation creation with fairness + waitlist.
         """
 
-        # Idempotency check
+        # ---------- Idempotency ----------
         for reservation in store.get_all_reservations().values():
             if (
                 reservation["sku"] == sku
@@ -32,24 +32,25 @@ class ReservationService:
                 and reservation["status"] == "RESERVED"
             ):
                 return reservation
-        
-        
 
-        # Reserve inventory (this is concurrency-safe)
-        
-        # Record user attempt
+        # ---------- Fairness ----------
         store.record_reservation(user_id)
-
         ttl_seconds = self.fairness_service.get_ttl_seconds(user_id)
 
-        # Reserve inventory (concurrency-safe)
-        await self.inventory_service.reserve_inventory(sku, quantity)
+        # ---------- Inventory reserve or waitlist ----------
+        try:
+            await self.inventory_service.reserve_inventory(sku, quantity)
+        except ValueError:
+            await self.waitlist_service.add_to_waitlist(sku, user_id, quantity)
+            return {
+                "status": "WAITLISTED",
+                "sku": sku,
+                "user_id": user_id
+            }
 
-        expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
-
-
+        # ---------- Create reservation ----------
         reservation_id = str(uuid.uuid4())
-        expires_at = datetime.utcnow() + timedelta(seconds=self.RESERVATION_TTL_SECONDS)
+        expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
 
         reservation = {
             "reservation_id": reservation_id,
@@ -71,15 +72,16 @@ class ReservationService:
 
         if reservation["status"] != "RESERVED":
             raise ValueError("Reservation cannot be confirmed")
-        
-        
 
-        # Check expiry
         if reservation["expires_at"] < datetime.utcnow():
             await self.expire_reservation(reservation_id)
             raise ValueError("Reservation expired")
 
         reservation["status"] = "CONFIRMED"
+
+        # ✅ success only on confirm
+        store.record_successful_checkout(reservation["user_id"])
+
         return reservation
 
     async def cancel_reservation(self, reservation_id: str):
@@ -91,12 +93,15 @@ class ReservationService:
         if reservation["status"] != "RESERVED":
             raise ValueError("Reservation cannot be cancelled")
 
-        # Release inventory
         await self.inventory_service.release_inventory(
             reservation["sku"], reservation["quantity"]
         )
 
         reservation["status"] = "CANCELLED"
+
+        # auto-upgrade waitlist
+        await self.waitlist_service.try_upgrade_waitlist(reservation["sku"])
+
         return reservation
 
     async def expire_reservation(self, reservation_id: str):
@@ -110,6 +115,5 @@ class ReservationService:
         )
 
         reservation["status"] = "EXPIRED"
-        
-        store.record_successful_checkout(reservation["user_id"])
 
+        await self.waitlist_service.try_upgrade_waitlist(reservation["sku"])

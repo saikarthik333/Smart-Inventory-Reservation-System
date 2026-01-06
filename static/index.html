@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FlexyPe Smart Inventory System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .section {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        input, button {
+            padding: 8px;
+            margin: 4px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e40af;
+        }
+
+        .output {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            margin-top: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>FlexyPe Smart Inventory Reservation System</h1>
+    <p>Concurrency-safe | Fair | Waitlist-enabled</p>
+</header>
+
+<div class="container">
+
+    <!-- Inventory Init -->
+    <div class="section">
+        <h2>1️⃣ Initialize Inventory</h2>
+        <input id="initSku" placeholder="SKU (e.g. SKU123)">
+        <input id="initQty" placeholder="Quantity" type="number">
+        <button onclick="initInventory()">Initialize</button>
+        <div id="initOutput" class="output"></div>
+    </div>
+
+    <!-- Inventory Health -->
+    <div class="section">
+        <h2>2️⃣ Inventory Health</h2>
+        <input id="healthSku" placeholder="SKU">
+        <button onclick="getHealth()">Check Health</button>
+        <div id="healthOutput" class="output"></div>
+    </div>
+
+    <!-- Reserve -->
+    <div class="section">
+        <h2>3️⃣ Reserve Inventory</h2>
+        <input id="reserveSku" placeholder="SKU">
+        <input id="reserveUser" placeholder="User ID">
+        <input id="reserveQty" placeholder="Quantity" type="number">
+        <button onclick="reserve()">Reserve</button>
+        <div id="reserveOutput" class="output"></div>
+    </div>
+
+    <!-- Checkout -->
+    <div class="section">
+        <h2>4️⃣ Checkout Actions</h2>
+        <input id="reservationId" placeholder="Reservation ID">
+        <button onclick="confirm()">Confirm</button>
+        <button onclick="cancel()" style="background:#dc2626;margin-top:6px;">Cancel</button>
+        <div id="checkoutOutput" class="output"></div>
+    </div>
+
+</div>
+
+<script>
+const API = "";
+
+async function initInventory() {
+    const sku = initSku.value;
+    const quantity = initQty.value;
+
+    const res = await fetch(`${API}/inventory/init`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({sku, quantity})
+    });
+
+    initOutput.textContent = await res.text();
+}
+
+async function getHealth() {
+    const sku = healthSku.value;
+    const res = await fetch(`${API}/analytics/inventory/${sku}`);
+    healthOutput.textContent = await res.text();
+}
+
+async function reserve() {
+    const sku = reserveSku.value;
+    const user_id = reserveUser.value;
+    const quantity = reserveQty.value;
+
+    const res = await fetch(`${API}/inventory/reserve`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({sku, user_id, quantity})
+    });
+
+    reserveOutput.textContent = await res.text();
+}
+
+async function confirm() {
+    const reservation_id = reservationId.value;
+
+    const res = await fetch(`${API}/checkout/confirm`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({reservation_id})
+    });
+
+    checkoutOutput.textContent = await res.text();
+}
+
+async function cancel() {
+    const reservation_id = reservationId.value;
+
+    const res = await fetch(`${API}/checkout/cancel`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({reservation_id})
+    });
+
+    checkoutOutput.textContent = await res.text();
+}
+</script>
+
+</body>
+</html>

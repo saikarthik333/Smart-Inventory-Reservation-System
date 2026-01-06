@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 
 class InMemoryStore:
@@ -14,8 +14,11 @@ class InMemoryStore:
         # reservation_id -> reservation data
         self.reservations: Dict[str, dict] = {}
 
-        # user_id -> stats
+        # user_id -> stats (fairness)
         self.user_stats: Dict[str, dict] = {}
+
+        # sku -> list of waitlisted requests (FIFO)
+        self.waitlists: Dict[str, List[dict]] = {}
 
     # ---------- Inventory ----------
 
@@ -28,6 +31,8 @@ class InMemoryStore:
     def decrement_inventory(self, sku: str, quantity: int):
         if sku not in self.inventory:
             raise ValueError("SKU does not exist")
+        if self.inventory[sku] < quantity:
+            raise ValueError("Insufficient inventory")
         self.inventory[sku] -= quantity
 
     def increment_inventory(self, sku: str, quantity: int):
@@ -67,7 +72,7 @@ class InMemoryStore:
     def record_successful_checkout(self, user_id: str):
         stats = self.get_user_stats(user_id)
         stats["successful_checkouts"] += 1
-        
+
     # ---------- Waitlist ----------
 
     def add_to_waitlist(self, sku: str, data: dict):
@@ -82,4 +87,3 @@ class InMemoryStore:
 
     def get_waitlist(self, sku: str):
         return self.waitlists.get(sku, [])
-
