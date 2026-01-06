@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+
 from app.controllers.inventory import router as inventory_router
+from app.controllers.checkout import router as checkout_router
 
 
 load_dotenv()
@@ -26,6 +28,7 @@ async def root():
         "health": "/health"
     }
 app.include_router(inventory_router)
+app.include_router(checkout_router)
 
 # Serve static frontend
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
