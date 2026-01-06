@@ -67,3 +67,19 @@ class InMemoryStore:
     def record_successful_checkout(self, user_id: str):
         stats = self.get_user_stats(user_id)
         stats["successful_checkouts"] += 1
+        
+    # ---------- Waitlist ----------
+
+    def add_to_waitlist(self, sku: str, data: dict):
+        if sku not in self.waitlists:
+            self.waitlists[sku] = []
+        self.waitlists[sku].append(data)
+
+    def pop_from_waitlist(self, sku: str):
+        if sku in self.waitlists and self.waitlists[sku]:
+            return self.waitlists[sku].pop(0)
+        return None
+
+    def get_waitlist(self, sku: str):
+        return self.waitlists.get(sku, [])
+
