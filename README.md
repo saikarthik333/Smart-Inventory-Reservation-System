@@ -4,6 +4,7 @@
 
 A backend-first smart inventory reservation system designed for **high-traffic flash-sale scenarios**, ensuring **no overselling**, **fair access**, and **automatic recovery from abandoned carts**.
 
+live link: https://smart-inventory-reservation-system.onrender.com/static/index.html
 ---
 
 ## 📌 Problem Statement
@@ -214,4 +215,5 @@ bash start.sh
 
 **Motapothula Sai Karthik**  
 B.Tech CSE (2026)  
+
 
