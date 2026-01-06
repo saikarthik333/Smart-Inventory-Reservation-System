@@ -14,6 +14,11 @@ class InMemoryStore:
         # reservation_id -> reservation data
         self.reservations: Dict[str, dict] = {}
 
+        # user_id -> stats
+        self.user_stats: Dict[str, dict] = {}
+
+    # ---------- Inventory ----------
+
     def set_inventory(self, sku: str, quantity: int):
         self.inventory[sku] = quantity
 
@@ -30,7 +35,7 @@ class InMemoryStore:
             self.inventory[sku] = 0
         self.inventory[sku] += quantity
 
-    # ---------- Reservation storage ----------
+    # ---------- Reservations ----------
 
     def save_reservation(self, reservation_id: str, data: dict):
         self.reservations[reservation_id] = data
@@ -44,20 +49,21 @@ class InMemoryStore:
 
     def get_all_reservations(self):
         return self.reservations
-    
+
+    # ---------- User stats (Fairness) ----------
+
     def get_user_stats(self, user_id: str) -> dict:
         if user_id not in self.user_stats:
-        self.user_stats[user_id] = {
-            "total_reservations": 0,
-            "successful_checkouts": 0
-        }
-    return self.user_stats[user_id]
+            self.user_stats[user_id] = {
+                "total_reservations": 0,
+                "successful_checkouts": 0
+            }
+        return self.user_stats[user_id]
 
     def record_reservation(self, user_id: str):
         stats = self.get_user_stats(user_id)
         stats["total_reservations"] += 1
 
     def record_successful_checkout(self, user_id: str):
-      stats = self.get_user_stats(user_id)
-     stats["successful_checkouts"] += 1
-
+        stats = self.get_user_stats(user_id)
+        stats["successful_checkouts"] += 1
